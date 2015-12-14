@@ -1,0 +1,88 @@
+import System
+import System.Collections.Generic
+import System.IO
+import System.Linq
+import System.Text
+import System.Threading.Tasks
+
+.array 0
+
+namespace CheckPath
+	
+	;;; <summary>
+	;;; The main entry point for the application.
+	;;; </summary>
+	main
+		
+	proc
+
+		data folders = new List<String>(Environment.GetEnvironmentVariable("PATH").Split(';'))
+
+		;; Look for duplicate folders
+		data dupsReported = false
+		data duplicates = new Dictionary<String, long>()
+		data folder, string
+
+		foreach folder in folders
+		begin
+			data count, long, folders.LongCount(lambda (f) {f.ToLower().Equals(folder.ToLower())})
+			if (count > 1)
+			begin
+				if (!dupsReported)
+				begin
+					Console.WriteLine("")
+					Console.WriteLine("These folders are in your path multiple times:")
+					dupsReported = true
+				end
+				try
+				begin
+					duplicates.Add(folder, count - 1)
+					Console.WriteLine("    - {0} ({1} times)", folder, count)
+				end
+				catch (syn_exception, @Exception)
+				begin
+					nop
+				end
+				endtry
+			end
+		end
+
+		;; If we found duplicates then remove them so we don't check/report missing folders multiple times.
+		data item, @KeyValuePair
+
+		foreach item in duplicates
+		begin
+			data ix, int
+			for ix from 0 thru item.Value - 1
+				folders.Remove(item.Key)
+		end
+
+		;; Look for folders that don't exist
+		data missingReported = false
+
+		foreach folder in folders
+		begin
+			if (!Directory.Exists(folder))
+			begin
+				if (!String.IsNullOrWhiteSpace(folder))
+				begin
+					if (!missingReported)
+					begin
+						Console.WriteLine("")
+						Console.WriteLine("These PATH folders don't exist:")
+						missingReported = true
+					end
+					Console.WriteLine("    - {0}", folder)
+				end
+			end
+		end
+
+		if (!dupsReported && !missingReported)
+		begin
+			Console.WriteLine("")
+			Console.WriteLine("No PATH issues found")
+		end
+
+	endmain
+	
+endnamespace
